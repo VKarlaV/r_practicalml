@@ -613,7 +613,7 @@ confusionMatrix(predict(Mod_rf, new_testing), new_testing$classe)</code></pre>
 </div>
 <div id="conclusion" class="section level2">
 <h2>Conclusion:</h2>
-<p>As can be found above, random forest model shows high accuracy 0.9986 compare with simple decision tree 0.73 when trained/cross-validated on the subsets of train datasets. Thus, we will use RF model fitting to predict the 20 real test cases. Please find below the printed results.</p>
+<p>As can be found above, random forest model shows higher accuracy 0.9986 (out-of-sample error = 0.01) compare with simple decision tree accuracy 0.73 (out-of-sample error= 0.27) when trained/cross-validated on the subsets of train datasets. Thus, we will use RF model fitting to predict the 20 real test cases. Please find below the printed results.</p>
 <pre class="r"><code>results &lt;- predict(Mod_rf, testing_clean)
 
 results</code></pre>
