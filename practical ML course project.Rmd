@@ -1,0 +1,97 @@
+---
+title: "Practical ML Course Project"
+author: "Veronica Wu"
+date: "8/3/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(caret)
+library(randomForest)
+library(gbm)
+library(rpart)
+library(doParallel)
+library(foreach)
+```
+
+## Import Data
+
+```{r}
+# import training
+training <- read.csv('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv', header=TRUE)
+
+# import testing
+testing <- read.csv('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv', header=TRUE)
+
+dim(training)
+
+str(training)
+```
+
+## Data Cleaning & Transformation
+
+### 1. Remove un-necessary variables
+1. remove variables with >= 90% of NA or blank value in training/testing data and subset testing data to keep the same columns
+2. remove near zero variables by `NearZeroVar`
+3. remove case identifiers and time variables such as `username`, `X`, etc
+
+```{r, echo=FALSE}
+NZV <- nearZeroVar(training)
+training_v1 <- training[, -NZV]
+training_v2 <- training_v1[, -c(1:5)]
+training_clean <- training_v2[,colSums(is.na(training_v2)| training_v2=='') <= dim(training_v2)[1]*0.9]
+dim(training_clean)
+
+testing_clean <- testing[, colnames(testing) %in% colnames(training_clean)]
+dim(testing_clean)
+```
+
+### Build Cross-validation dataset
+
+We create another validation set from cleaned-training data for simple cross-validation.
+
+```{r}
+set.seed(123)
+
+inTrain <- createDataPartition(training_clean$classe, p=3/4, list=FALSE)
+new_training <- training_clean[inTrain,]
+new_testing <- training_clean[-inTrain,]
+```
+
+## 2. Build Models
+
+Since this case is a classification problem, we consider using simple classification decision tree and random forest to build prediction models.
+
+```{r}
+# simple classification tree
+
+DecTree <- rpart(classe ~., data=new_training, method='class')
+
+confusionMatrix(predict(DecTree, new_testing, type='class'), new_testing$classe)
+```
+```{r}
+### random forest and compute in parallel mode to improve speed
+
+clnum <- detectCores()
+cl <- makeCluster(clnum)
+registerDoParallel(cl)
+
+Mod_rf <- train(classe ~., method='rf', data=new_training, allowParallel=TRUE)
+confusionMatrix(predict(Mod_rf, new_testing), new_testing$classe)
+
+stopCluster(cl)
+```
+
+## Conclusion:
+
+As can be found above, random forest model shows high accuracy 0.9986 compare with simple decision tree 0.73 when trained/cross-validated on the subsets of train datasets. Thus, we will use RF model fitting to predict the 20 real test cases. Please find below the printed results.
+
+```{r}
+results <- predict(Mod_rf, testing_clean)
+
+results
+```
